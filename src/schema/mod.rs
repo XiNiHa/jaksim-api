@@ -1,21 +1,17 @@
-use juniper::{
-    graphql_object, EmptyMutation, EmptySubscription, FieldResult, GraphQLObject, RootNode,
-};
+use async_graphql::*;
 
-pub type Schema = RootNode<'static, Query, EmptyMutation<Context>, EmptySubscription<Context>>;
+pub type AppSchema = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
 
-pub struct Context {}
+pub struct QueryRoot;
 
-pub struct Query;
-
-#[graphql_object(context = Context)]
-impl Query {
-    fn echo(_ctx: &Context, message: String) -> FieldResult<Echo> {
-      Ok(Echo { message })
+#[Object]
+impl QueryRoot {
+    async fn echo(&self, message: String) -> Echo {
+        Echo { message }
     }
 }
 
-#[derive(GraphQLObject)]
+#[derive(SimpleObject)]
 struct Echo {
     message: String,
 }

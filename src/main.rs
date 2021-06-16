@@ -1,31 +1,31 @@
 mod schema;
 
-use juniper::{EmptyMutation, EmptySubscription};
-use juniper_rocket_async::{GraphQLRequest, GraphQLResponse, playground_source};
-use rocket::{State, response::content::Html};
-use schema::{Context, Query, Schema};
+use async_graphql::{
+    http::{playground_source, GraphQLPlaygroundConfig},
+    EmptyMutation, EmptySubscription, Schema,
+};
+use async_graphql_rocket::{Request, Response};
+use rocket::{response::content::Html, State};
+use schema::{AppSchema, QueryRoot};
 
 extern crate rocket;
 
 #[rocket::get("/graphql")]
 fn graphql_playground_handler() -> Html<String> {
-    playground_source("/graphql", None)
+    Html(playground_source(GraphQLPlaygroundConfig::new("/graphql")))
 }
 
-#[rocket::post("/graphql", data="<request>")]
-async fn post_graphql_handler(
-    request: GraphQLRequest,
-    schema: State<'_, Schema>
-) -> GraphQLResponse {
-    request.execute(&schema, &Context{}).await
+#[rocket::post("/graphql", data = "<request>", format = "application/json")]
+async fn post_graphql_handler(schema: &State<AppSchema>, request: Request) -> Response {
+    request.execute(schema).await
 }
 
 #[rocket::launch]
-fn rocket() -> rocket::Rocket {
-    rocket::ignite()
-        .manage(Schema::new(Query, EmptyMutation::new(), EmptySubscription::new()))
-        .mount("/", rocket::routes![
-            graphql_playground_handler,
-            post_graphql_handler
-        ])
+fn rocket() -> _ {
+    rocket::build()
+        .manage(Schema::build(QueryRoot, EmptyMutation, EmptySubscription).finish())
+        .mount(
+            "/",
+            rocket::routes![graphql_playground_handler, post_graphql_handler],
+        )
 }
